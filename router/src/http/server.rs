@@ -4,7 +4,8 @@ use crate::http::types::{
     EmbedSparseRequest, EmbedSparseResponse, Embedding, EncodingFormat, Input, InputIds, InputType,
     OpenAICompatEmbedding, OpenAICompatErrorResponse, OpenAICompatRequest, OpenAICompatResponse,
     OpenAICompatUsage, PredictInput, PredictRequest, PredictResponse, Prediction, Rank,
-    RerankRequest, RerankResponse, Sequence, SimpleToken, SparseValue, TokenizeInput,
+    RerankRequest, RerankResponse, Sequence, SimilarityInput, SimilarityParameters,
+    SimilarityRequest, SimilarityResponse, SimpleToken, SparseValue, TokenizeInput,
     TokenizeRequest, TokenizeResponse, TruncationDirection, VertexPrediction, VertexRequest,
     VertexResponse,
 };
@@ -26,6 +27,7 @@ use futures::future::join_all;
 use futures::FutureExt;
 use http::header::AUTHORIZATION;
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
+use simsimd::SpatialSimilarity;
 use std::net::SocketAddr;
 use std::time::{Duration, Instant};
 use text_embeddings_backend::BackendError;
@@ -453,6 +455,88 @@ async fn rerank(
     tracing::info!("Success");
 
     Ok((headers, Json(response)))
+}
+
+/// Get Sentence Similarity. Returns a 424 status code if the model is not an embedding model.
+#[utoipa::path(
+post,
+tag = "Text Embeddings Inference",
+path = "/similarity",
+request_body = SimilarityRequest,
+responses(
+(status = 200, description = "Sentence Similarity", body = SimilarityResponse),
+(status = 424, description = "Embedding Error", body = ErrorResponse,
+example = json ! ({"error": "Inference failed", "error_type": "backend"})),
+(status = 429, description = "Model is overloaded", body = ErrorResponse,
+example = json ! ({"error": "Model is overloaded", "error_type": "overloaded"})),
+(status = 422, description = "Tokenization error", body = ErrorResponse,
+example = json ! ({"error": "Tokenization error", "error_type": "tokenizer"})),
+(status = 413, description = "Batch size error", body = ErrorResponse,
+example = json ! ({"error": "Batch size error", "error_type": "validation"})),
+)
+)]
+#[instrument(
+    skip_all,
+    fields(total_time, tokenization_time, queue_time, inference_time,)
+)]
+async fn similarity(
+    infer: Extension<Infer>,
+    info: Extension<Info>,
+    Json(req): Json<SimilarityRequest>,
+) -> Result<(HeaderMap, Json<SimilarityResponse>), (StatusCode, Json<ErrorResponse>)> {
+    if req.inputs.sentences.is_empty() {
+        let message = "`inputs.sentences` cannot be empty".to_string();
+        tracing::error!("{message}");
+        let err = ErrorResponse {
+            error: message,
+            error_type: ErrorType::Validation,
+        };
+        let counter = metrics::counter!("te_request_failure", "err" => "validation");
+        counter.increment(1);
+        Err(err)?;
+    }
+    // +1 because of the source sentence
+    let batch_size = req.inputs.sentences.len() + 1;
+    if batch_size > info.max_client_batch_size {
+        let message = format!(
+            "batch size {batch_size} > maximum allowed batch size {}",
+            info.max_client_batch_size
+        );
+        tracing::error!("{message}");
+        let err = ErrorResponse {
+            error: message,
+            error_type: ErrorType::Validation,
+        };
+        let counter = metrics::counter!("te_request_failure", "err" => "batch_size");
+        counter.increment(1);
+        Err(err)?;
+    }
+
+    // Convert request to embed request
+    let mut inputs = Vec::with_capacity(req.inputs.sentences.len() + 1);
+    inputs.push(InputType::String(req.inputs.source_sentence));
+    for s in req.inputs.sentences {
+        inputs.push(InputType::String(s));
+    }
+    let parameters = req.parameters.unwrap_or_default();
+    let embed_req = EmbedRequest {
+        inputs: Input::Batch(inputs),
+        truncate: parameters.truncate,
+        truncation_direction: parameters.truncation_direction,
+        prompt_name: parameters.prompt_name,
+        normalize: false,
+    };
+
+    // Get embeddings
+    let (header_map, embed_response) = embed(infer, info, Json(embed_req)).await?;
+    let embeddings = embed_response.0 .0;
+
+    // Compute cosine
+    let distances = (1..batch_size)
+        .map(|i| 1.0 - f32::cosine(&embeddings[0], &embeddings[i]).unwrap() as f32)
+        .collect();
+
+    Ok((header_map, Json(SimilarityResponse(distances))))
 }
 
 /// Get Embeddings. Returns a 424 status code if the model is not an embedding model.
@@ -1472,6 +1556,7 @@ pub async fn run(
     embed_all,
     embed_sparse,
     openai_embed,
+    similarity,
     tokenize,
     decode,
     metrics,
@@ -1509,6 +1594,10 @@ pub async fn run(
     TokenizeRequest,
     TokenizeResponse,
     TruncationDirection,
+    SimilarityInput,
+    SimilarityParameters,
+    SimilarityRequest,
+    SimilarityResponse,
     SimpleToken,
     InputType,
     InputIds,
@@ -1545,9 +1634,12 @@ pub async fn run(
         }
     });
 
-    let prom_handle = prom_builder
-        .install_recorder()
-        .context("failed to install metrics recorder")?;
+    // See: https://github.com/metrics-rs/metrics/issues/467#issuecomment-2022755151
+    let (recorder, _) = prom_builder
+        .build()
+        .context("failed to build prometheus recorder")?;
+    let prom_handle = recorder.handle();
+    metrics::set_global_recorder(recorder).context("Failed to set global recorder")?;
 
     // CORS layer
     let allow_origin = allow_origin.unwrap_or(AllowOrigin::any());
@@ -1577,9 +1669,7 @@ pub async fn run(
         ApiDoc::openapi()
     };
 
-    // Create router
-    let mut app = Router::new()
-        .merge(SwaggerUi::new("/docs").url("/api-doc/openapi.json", doc))
+    let mut routes = Router::new()
         // Base routes
         .route("/info", get(get_model_info))
         .route("/embed", post(embed))
@@ -1587,13 +1677,17 @@ pub async fn run(
         .route("/embed_sparse", post(embed_sparse))
         .route("/predict", post(predict))
         .route("/rerank", post(rerank))
+        .route("/similarity", post(similarity))
         .route("/tokenize", post(tokenize))
         .route("/decode", post(decode))
         // OpenAI compat route
         .route("/embeddings", post(openai_embed))
         .route("/v1/embeddings", post(openai_embed))
         // Vertex compat route
-        .route("/vertex", post(vertex_compatibility))
+        .route("/vertex", post(vertex_compatibility));
+
+    #[allow(unused_mut)]
+    let mut public_routes = Router::new()
         // Base Health route
         .route("/health", get(health))
         // Inference API health route
@@ -1601,9 +1695,7 @@ pub async fn run(
         // AWS Sagemaker health route
         .route("/ping", get(health))
         // Prometheus metrics route
-        .route("/metrics", get(metrics))
-        // Update payload limit
-        .layer(DefaultBodyLimit::max(payload_limit));
+        .route("/metrics", get(metrics));
 
     #[cfg(feature = "google")]
     {
@@ -1611,35 +1703,44 @@ pub async fn run(
 
         if let Ok(env_predict_route) = std::env::var("AIP_PREDICT_ROUTE") {
             tracing::info!("Serving Vertex compatible route on {env_predict_route}");
-            app = app.route(&env_predict_route, post(vertex_compatibility));
+            routes = routes.route(&env_predict_route, post(vertex_compatibility));
         }
 
         if let Ok(env_health_route) = std::env::var("AIP_HEALTH_ROUTE") {
             tracing::info!("Serving Vertex compatible health route on {env_health_route}");
-            app = app.route(&env_health_route, get(health));
+            public_routes = public_routes.route(&env_health_route, get(health));
         }
     }
     #[cfg(not(feature = "google"))]
     {
         // Set default routes
-        app = match &info.model_type {
+        routes = match &info.model_type {
             ModelType::Classifier(_) => {
-                app.route("/", post(predict))
+                routes
+                    .route("/", post(predict))
                     // AWS Sagemaker route
                     .route("/invocations", post(predict))
             }
             ModelType::Reranker(_) => {
-                app.route("/", post(rerank))
+                routes
+                    .route("/", post(rerank))
                     // AWS Sagemaker route
                     .route("/invocations", post(rerank))
             }
             ModelType::Embedding(model) => {
-                if model.pooling == "splade" {
-                    app.route("/", post(embed_sparse))
+                if std::env::var("TASK").ok() == Some("sentence-similarity".to_string()) {
+                    routes
+                        .route("/", post(similarity))
+                        // AWS Sagemaker route
+                        .route("/invocations", post(similarity))
+                } else if model.pooling == "splade" {
+                    routes
+                        .route("/", post(embed_sparse))
                         // AWS Sagemaker route
                         .route("/invocations", post(embed_sparse))
                 } else {
-                    app.route("/", post(embed))
+                    routes
+                        .route("/", post(embed))
                         // AWS Sagemaker route
                         .route("/invocations", post(embed))
                 }
@@ -1647,16 +1748,8 @@ pub async fn run(
         };
     }
 
-    app = app
-        .layer(Extension(infer))
-        .layer(Extension(info))
-        .layer(Extension(prom_handle.clone()))
-        .layer(OtelAxumLayer::default())
-        .layer(cors_layer);
-
     if let Some(api_key) = api_key {
-        let mut prefix = "Bearer ".to_string();
-        prefix.push_str(&api_key);
+        let prefix = format!("Bearer {}", api_key);
 
         // Leak to allow FnMut
         let api_key: &'static str = prefix.leak();
@@ -1673,8 +1766,19 @@ pub async fn run(
             }
         };
 
-        app = app.layer(axum::middleware::from_fn(auth));
+        routes = routes.layer(axum::middleware::from_fn(auth));
     }
+
+    let app = Router::new()
+        .merge(SwaggerUi::new("/docs").url("/api-doc/openapi.json", doc))
+        .merge(routes)
+        .merge(public_routes)
+        .layer(Extension(infer))
+        .layer(Extension(info))
+        .layer(Extension(prom_handle.clone()))
+        .layer(OtelAxumLayer::default())
+        .layer(DefaultBodyLimit::max(payload_limit))
+        .layer(cors_layer);
 
     // Run server
     let listener = tokio::net::TcpListener::bind(&addr)

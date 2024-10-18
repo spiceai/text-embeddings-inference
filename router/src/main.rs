@@ -14,10 +14,10 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 struct Args {
     /// The name of the model to load.
     /// Can be a MODEL_ID as listed on <https://hf.co/models> like
-    /// `thenlper/gte-base`.
+    /// `BAAI/bge-large-en-v1.5`.
     /// Or it can be a local directory containing the necessary files
     /// as saved by `save_pretrained(...)` methods of transformers
-    #[clap(default_value = "thenlper/gte-base", long, env)]
+    #[clap(default_value = "BAAI/bge-large-en-v1.5", long, env)]
     #[redact(partial)]
     model_id: String,
 
@@ -82,7 +82,7 @@ struct Args {
     /// The name of the prompt that should be used by default for encoding. If not set, no prompt
     /// will be applied.
     ///
-    /// Must be a key in the `Sentence Transformers` configuration `prompts` dictionary.
+    /// Must be a key in the `sentence-transformers` configuration `prompts` dictionary.
     ///
     /// For example if ``default_prompt_name`` is "query" and the ``prompts`` is {"query": "query: ", ...},
     /// then the sentence "What is the capital of France?" will be encoded as

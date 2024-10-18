@@ -198,7 +198,7 @@ pub async fn run(
     };
     tracing::info!("Maximum number of tokens per request: {max_input_length}");
 
-    let tokenization_workers = tokenization_workers.unwrap_or_else(num_cpus::get_physical);
+    let tokenization_workers = tokenization_workers.unwrap_or_else(num_cpus::get);
 
     // Try to load new ST Config
     let mut new_st_config: Option<NewSTConfig> = None;
@@ -235,16 +235,7 @@ pub async fn run(
     );
 
     // Get dtype
-    let dtype = dtype.unwrap_or({
-        #[cfg(any(feature = "accelerate", feature = "mkl", feature = "mkl-dynamic"))]
-        {
-            DType::Float32
-        }
-        #[cfg(not(any(feature = "accelerate", feature = "mkl", feature = "mkl-dynamic")))]
-        {
-            DType::Float16
-        }
-    });
+    let dtype = dtype.unwrap_or_default();
 
     // Create backend
     tracing::info!("Starting model backend");
