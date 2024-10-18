@@ -27,6 +27,9 @@ impl fmt::Display for DType {
             DType::Float16 => write!(f, "float16"),
             #[cfg(any(feature = "python", feature = "candle", feature = "ort"))]
             DType::Float32 => write!(f, "float32"),
+            // #[cfg(feature = "candle")]
+            // DType::Q6K => write!(f, "q6k"),
+            _ => unreachable!()
         }
     }
 }
