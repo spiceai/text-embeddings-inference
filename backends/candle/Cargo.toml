@@ -14,9 +14,10 @@ candle-nn = { version = "*" }
 candle-transformers = { version = "*" }
 candle-flash-attn = { version = "*", optional = true }
 candle-flash-attn-v1 = { git = "https://github.com/huggingface/candle-flash-attn-v1", rev = "3f1870b0d708579904c76e41745c659c3f9fa038", optional = true }
-candle-cublaslt = { git = "https://github.com/huggingface/candle-cublaslt", rev = "cf789b7dd6d4abb19b03b9556442f94f0588b4a0", optional = true }
-candle-layer-norm = { git = "https://github.com/huggingface/candle-layer-norm", rev = "94c2add7d94c2d63aebde77f7534614e04dbaea1", optional = true }
-candle-rotary = { git = "https://github.com/huggingface/candle-rotary", rev = "0a718a0856569a92f3112e64f10d07e4447822e8", optional = true }
+candle-cublaslt = {git = "https://github.com/spiceai/candle-cublaslt", rev = "4d5bd2e4757708752a433ad7bd3068e352c9e754", optional = true }
+cudarc = { git = "https://github.com/coreylowman/cudarc", rev = "d3405fa5ce18068d0362142c5d7b3910ea4039fa", optional = true }
+candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev = "2e20e75210b3ccfc4f42b4e1f4b0cddaf04eef8b", optional = true }
+candle-rotary = { git = "https://github.com/Jeadie/candle-rotary", rev = "66068dc0e3d500cb36c56c932b7398c079be7b70", optional = true }
 nohash-hasher = { workspace = true }
 text-embeddings-backend-core = { path = "../core" }
 tracing = { workspace = true }
@@ -42,7 +43,7 @@ accelerate = ["dep:accelerate-src", "candle/accelerate", "candle-nn/accelerate"]
 metal = ["candle/metal", "candle-nn/metal"]
 mkl = ["dep:intel-mkl-src", "intel-mkl-src/mkl-static-lp64-iomp", "candle/mkl", "candle-nn/mkl"]
 mkl-dynamic = ["dep:intel-mkl-src", "intel-mkl-src/mkl-dynamic-lp64-iomp", "candle/mkl-dynamic", "candle-nn/mkl-dynamic"]
-cuda = ["candle/cuda", "candle-nn/cuda", "dep:candle-cublaslt", "dep:candle-layer-norm", "dep:candle-rotary"]
+cuda = ["candle/cuda", "candle-nn/cuda", "dep:candle-cublaslt", "dep:candle-layer-norm", "dep:candle-rotary", "dep:cudarc" ]
 flash-attn-v1 = ["dep:candle-flash-attn-v1", "cuda"]
 flash-attn = ["dep:candle-flash-attn", "cuda"]
 static-linking = ["candle-cublaslt?/static-linking"]
