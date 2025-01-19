@@ -17,7 +17,7 @@ candle-flash-attn-v1 = { git = "https://github.com/huggingface/candle-flash-attn
 candle-cublaslt = {git = "https://github.com/spiceai/candle-cublaslt", rev = "147f4424b0567131c41cf1ee667645120682170b", optional = true }
 cudarc = { git = "https://github.com/EricLBuehler/cudarc", rev = "f6e5bf51153d40e34eb1262b98895ac1235b6422", optional = true }
 candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev = "4e4beb4cddc045e825a7719885cc47f4bf587f66", optional = true }
-candle-rotary = { git = "https://github.com/Jeadie/candle-rotary", rev = "66068dc0e3d500cb36c56c932b7398c079be7b70", optional = true }
+candle-rotary = { git = "https://github.com/sgrebnov/candle-rotary", rev = "ababa58e69aa093e19879b7bcad848290d8008b2", optional = true }
 nohash-hasher = { workspace = true }
 text-embeddings-backend-core = { path = "../core" }
 tracing = { workspace = true }
