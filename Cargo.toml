@@ -33,7 +33,7 @@ thiserror = "1.0"
 
 
 [patch.crates-io]
-cudarc = { git = "https://github.com/coreylowman/cudarc", rev = "d3405fa5ce18068d0362142c5d7b3910ea4039fa" }
+cudarc = { git = "https://github.com/EricLBuehler/cudarc", rev = "f6e5bf51153d40e34eb1262b98895ac1235b6422" }
 
 [profile.release]
 debug = 0
