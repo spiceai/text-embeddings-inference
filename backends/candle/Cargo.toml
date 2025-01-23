@@ -9,9 +9,12 @@ homepage.workspace = true
 anyhow = { workspace = true }
 accelerate-src = { version = "0.3.2", optional = true }
 intel-mkl-src = { version = "0.8.1", optional = true  }
-candle = { version = "*", package = "candle-core", default-features = false }
-candle-nn = { version = "*" }
-candle-transformers = { version = "*" }
+#candle = { version = "*", package = "candle-core", default-features = false }
+#candle-nn = { version = "*" }
+#candle-transformers = { version = "*" }
+candle = { git = "https://github.com/spiceai/candle.git", version = "0.8", rev = "2056b181860620971fa3b43c69ad8d26321e9cda", package = "candle-core", default-features = false }
+candle-nn = { git = "https://github.com/spiceai/candle.git", version = "0.8", rev = "2056b181860620971fa3b43c69ad8d26321e9cda" }
+candle-transformers = { git = "https://github.com/spiceai/candle.git", version = "0.8", rev = "2056b181860620971fa3b43c69ad8d26321e9cda" }
 candle-flash-attn = { version = "*", optional = true }
 candle-flash-attn-v1 = { git = "https://github.com/huggingface/candle-flash-attn-v1", rev = "3f1870b0d708579904c76e41745c659c3f9fa038", optional = true }
 candle-cublaslt = {git = "https://github.com/spiceai/candle-cublaslt", rev = "147f4424b0567131c41cf1ee667645120682170b", optional = true }
