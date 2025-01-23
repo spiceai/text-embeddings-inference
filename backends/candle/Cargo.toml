@@ -12,15 +12,15 @@ intel-mkl-src = { version = "0.8.1", optional = true  }
 #candle = { version = "*", package = "candle-core", default-features = false }
 #candle-nn = { version = "*" }
 #candle-transformers = { version = "*" }
-candle = { git = "https://github.com/spiceai/candle.git", version = "0.8", rev = "2056b181860620971fa3b43c69ad8d26321e9cda", package = "candle-core", default-features = false }
-candle-nn = { git = "https://github.com/spiceai/candle.git", version = "0.8", rev = "2056b181860620971fa3b43c69ad8d26321e9cda" }
-candle-transformers = { git = "https://github.com/spiceai/candle.git", version = "0.8", rev = "2056b181860620971fa3b43c69ad8d26321e9cda" }
+candle = { git = "https://github.com/spiceai/candle.git", version = "0.8", rev = "a84593f1951a4a9083e29257003a8112eb1450da", package = "candle-core", default-features = false }
+candle-nn = { git = "https://github.com/spiceai/candle.git", version = "0.8", rev = "a84593f1951a4a9083e29257003a8112eb1450da" }
+candle-transformers = { git = "https://github.com/spiceai/candle.git", version = "0.8", rev = "a84593f1951a4a9083e29257003a8112eb1450da" }
 candle-flash-attn = { version = "*", optional = true }
 candle-flash-attn-v1 = { git = "https://github.com/huggingface/candle-flash-attn-v1", rev = "3f1870b0d708579904c76e41745c659c3f9fa038", optional = true }
-candle-cublaslt = {git = "https://github.com/spiceai/candle-cublaslt", rev = "074bf4a714aaddb6a818aec620763be070623974", optional = true }
+candle-cublaslt = {git = "https://github.com/spiceai/candle-cublaslt", rev = "cd6c1385be55ea83c3c3990a3f04abeb43da66ee", optional = true }
 cudarc = { git = "https://github.com/EricLBuehler/cudarc", rev = "f6e5bf51153d40e34eb1262b98895ac1235b6422", optional = true }
-candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev = "f68efd85715d77215349e09135aee713c0501ca6", optional = true }
-candle-rotary = { git = "https://github.com/spiceai/candle-rotary", rev = "51b5608534b6c827ed72f59a5c6996ac3360d24b", optional = true }
+candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev = "692dd850c2553189737beb30e795197f173b9498", optional = true }
+candle-rotary = { git = "https://github.com/spiceai/candle-rotary", rev = "afe51dfb57ecf6569b9db45295c490af523c5818", optional = true }
 nohash-hasher = { workspace = true }
 text-embeddings-backend-core = { path = "../core" }
 tracing = { workspace = true }
