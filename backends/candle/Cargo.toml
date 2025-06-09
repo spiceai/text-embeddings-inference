@@ -9,10 +9,10 @@ homepage.workspace = true
 anyhow = { workspace = true }
 accelerate-src = { version = "0.3.2", optional = true }
 intel-mkl-src = { version = "0.8.1", optional = true  }
-candle = { version = "*", package = "candle-core", default-features = false }
-candle-nn = { version = "*" }
-candle-transformers = { version = "*" }
-candle-flash-attn = { version = "*", optional = true }
+candle = { version = "=0.8", package = "candle-core", default-features = false }
+candle-nn = { version = "=0.8" }
+candle-transformers = { version = "=0.8" }
+candle-flash-attn = { version = "=0.8", optional = true }
 candle-flash-attn-v1 = { git = "https://github.com/huggingface/candle-flash-attn-v1", rev = "3f1870b0d708579904c76e41745c659c3f9fa038", optional = true }
 candle-cublaslt = { git = "https://github.com/huggingface/candle-cublaslt", rev = "cf789b7dd6d4abb19b03b9556442f94f0588b4a0", optional = true }
 candle-layer-norm = { git = "https://github.com/huggingface/candle-layer-norm", rev = "94c2add7d94c2d63aebde77f7534614e04dbaea1", optional = true }
