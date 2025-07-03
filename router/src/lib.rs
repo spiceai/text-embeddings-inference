@@ -27,10 +27,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::Path;
 use std::time::{Duration, Instant};
 use text_embeddings_backend::{DType, Pool};
-use text_embeddings_core::download::{
-    download_artifacts, download_new_st_config, download_pool_config, download_st_config,
-    ST_CONFIG_NAMES,
-};
+use text_embeddings_core::download::{download_artifacts, ST_CONFIG_NAMES};
 use text_embeddings_core::infer::Infer;
 use text_embeddings_core::queue::Queue;
 use text_embeddings_core::tokenization::Tokenization;
@@ -57,7 +54,7 @@ pub async fn run(
     auto_truncate: bool,
     default_prompt: Option<String>,
     default_prompt_name: Option<String>,
-    hf_api_token: Option<String>,
+    hf_token: Option<String>,
     hostname: Option<String>,
     port: u16,
     uds_path: Option<String>,
@@ -66,19 +63,24 @@ pub async fn run(
     api_key: Option<String>,
     otlp_endpoint: Option<String>,
     otlp_service_name: String,
+    prometheus_port: u16,
     cors_allow_origin: Option<Vec<String>>,
 ) -> Result<()> {
     let model_id_path = Path::new(&model_id);
-    let model_root = if model_id_path.exists() && model_id_path.is_dir() {
+    let (model_root, api_repo) = if model_id_path.exists() && model_id_path.is_dir() {
         // Using a local model
-        model_id_path.to_path_buf()
+        (model_id_path.to_path_buf(), None)
     } else {
-        let mut builder = ApiBuilder::new()
+        let mut builder = ApiBuilder::from_env()
             .with_progress(false)
-            .with_token(hf_api_token);
+            .with_token(hf_token);
 
         if let Some(cache_dir) = huggingface_hub_cache {
             builder = builder.with_cache_dir(cache_dir.into());
+        }
+
+        if let Ok(origin) = std::env::var("HF_HUB_USER_AGENT_ORIGIN") {
+            builder = builder.with_user_agent("origin", origin.as_str());
         }
 
         let api = builder.build().unwrap();
@@ -88,28 +90,13 @@ pub async fn run(
             revision.clone().unwrap_or("main".to_string()),
         ));
 
-        // Optionally download the pooling config.
-        if pooling.is_none() {
-            // If a pooling config exist, download it
-            let _ = download_pool_config(&api_repo).await.map_err(|err| {
-                tracing::warn!("Download failed: {err}");
-                err
-            });
-        }
-
-        // Download legacy sentence transformers config
-        // We don't warn on failure as it is a legacy file
-        let _ = download_st_config(&api_repo).await;
-        // Download new sentence transformers config
-        let _ = download_new_st_config(&api_repo).await.map_err(|err| {
-            tracing::warn!("Download failed: {err}");
-            err
-        });
-
         // Download model from the Hub
-        download_artifacts(&api_repo)
-            .await
-            .context("Could not download model artifacts")?
+        (
+            download_artifacts(&api_repo, pooling.is_none())
+                .await
+                .context("Could not download model artifacts")?,
+            Some(api_repo),
+        )
     };
 
     // Load config
@@ -248,32 +235,31 @@ pub async fn run(
     tracing::info!("Starting model backend");
     let backend = text_embeddings_backend::Backend::new(
         model_root,
+        api_repo,
         dtype.clone(),
         backend_model_type,
         uds_path.unwrap_or("/tmp/text-embeddings-inference-server".to_string()),
         otlp_endpoint.clone(),
         otlp_service_name.clone(),
     )
+    .await
     .context("Could not create backend")?;
     backend
         .health()
         .await
         .context("Model backend is not healthy")?;
 
-    if !backend.padded_model {
-        tracing::info!("Warming up model");
-        backend
-            .warmup(max_input_length, max_batch_tokens, max_batch_requests)
-            .await
-            .context("Model backend is not healthy")?;
-    }
+    tracing::info!("Warming up model");
+    backend
+        .warmup(max_input_length, max_batch_tokens, max_batch_requests)
+        .await
+        .context("Model backend is not healthy")?;
 
     let max_batch_requests = backend
         .max_batch_size
-        .map(|s| {
+        .inspect(|&s| {
             tracing::warn!("Backend does not support a batch size > {s}");
             tracing::warn!("forcing `max_batch_requests={s}`");
-            s
         })
         .or(max_batch_requests);
 
@@ -311,9 +297,8 @@ pub async fn run(
         std::env::var("AIP_HTTP_PORT")
             .ok()
             .and_then(|p| p.parse().ok())
-            .map(|p| {
+            .inspect(|&p| {
                 tracing::info!("`AIP_HTTP_PORT` is set: overriding port {port} by port {p}");
-                p
             })
             .unwrap_or(port)
     } else {
@@ -328,7 +313,7 @@ pub async fn run(
         }
     };
 
-    let prom_builder = prometheus::prometheus_builer(info.max_input_length)?;
+    let prom_builder = prometheus::prometheus_builer(addr, prometheus_port, info.max_input_length)?;
 
     #[cfg(all(feature = "grpc", feature = "http"))]
     compile_error!("Features `http` and `grpc` cannot be enabled at the same time.");
@@ -368,6 +353,15 @@ fn get_backend_model_type(
     pooling: Option<text_embeddings_backend::Pool>,
 ) -> Result<text_embeddings_backend::ModelType> {
     for arch in &config.architectures {
+        // Edge case affecting `Alibaba-NLP/gte-multilingual-base` and possibly other fine-tunes of
+        // the same base model. More context at https://huggingface.co/Alibaba-NLP/gte-multilingual-base/discussions/7
+        if arch == "NewForTokenClassification"
+            && (config.id2label.is_none() | config.label2id.is_none())
+        {
+            tracing::warn!("Provided `--model-id` is likely an AlibabaNLP GTE model, but the `config.json` contains the architecture `NewForTokenClassification` but it doesn't contain the `id2label` and `label2id` mapping, so `NewForTokenClassification` architecture will be ignored.");
+            continue;
+        }
+
         if Some(text_embeddings_backend::Pool::Splade) == pooling && arch.ends_with("MaskedLM") {
             return Ok(text_embeddings_backend::ModelType::Embedding(
                 text_embeddings_backend::Pool::Splade,
