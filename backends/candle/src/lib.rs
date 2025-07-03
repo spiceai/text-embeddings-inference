@@ -141,6 +141,7 @@ impl CandleBackend {
             // Parse file
             let index_file_string: String = std::fs::read_to_string(&index_file)
                 .map_err(|err| BackendError::Start(err.to_string()))?;
+
             let json: serde_json::Value = serde_json::from_str(&index_file_string)
                 .map_err(|err| BackendError::Start(err.to_string()))?;
 

@@ -502,7 +502,7 @@ enum BackendCommand {
     ),
 }
 
-async fn download_safetensors(api: &ApiRepo) -> Result<Vec<PathBuf>, ApiError> {
+pub async fn download_safetensors(api: &ApiRepo) -> Result<Vec<PathBuf>, ApiError> {
     // Single file
     tracing::info!("Downloading `model.safetensors`");
     match api.get("model.safetensors").await {

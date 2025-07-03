@@ -75,8 +75,8 @@ metal = ["candle/metal", "candle-nn/metal"]
 # ]
 mkl = ["dep:intel-mkl-src", "candle/_mkl"]
 cuda = [
-    "candle/_cuda",
-    "candle-nn/_cuda",
+    "candle/cuda",
+    "candle-nn/cuda",
     "dep:candle-cublaslt",
     "dep:candle-layer-norm",
     "dep:candle-rotary",
