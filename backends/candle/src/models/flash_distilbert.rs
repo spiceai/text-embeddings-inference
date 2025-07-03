@@ -85,6 +85,7 @@ impl DistilBertAttention {
             self.softmax_scale,
             false,
             None,
+            None,
         )?;
         let attention = attention.flatten_from(candle::D::Minus2)?;
 
@@ -210,6 +211,11 @@ impl FlashDistilBertModel {
                 if let (Ok(embeddings), Ok(encoder)) = (
                     DistilBertEmbeddings::load(vb.pp("distilbert.embeddings"), config),
                     DistilBertEncoder::load(vb.pp("distilbert.transformer"), config),
+                ) {
+                    (embeddings, encoder)
+                } else if let (Ok(embeddings), Ok(encoder)) = (
+                    DistilBertEmbeddings::load(vb.pp("embeddings"), config),
+                    DistilBertEncoder::load(vb.pp("transformer"), config),
                 ) {
                     (embeddings, encoder)
                 } else {

@@ -1,9 +1,9 @@
 use ndarray::{s, Axis};
 use nohash_hasher::BuildNoHashHasher;
-use ort::{GraphOptimizationLevel, Session};
+use ort::session::{builder::GraphOptimizationLevel, Session};
 use std::collections::HashMap;
 use std::ops::{Div, Mul};
-use std::path::PathBuf;
+use std::path::Path;
 use text_embeddings_backend_core::{
     Backend, BackendError, Batch, Embedding, Embeddings, ModelType, Pool, Predictions,
 };
@@ -16,13 +16,12 @@ pub struct OrtBackend {
 
 impl OrtBackend {
     pub fn new(
-        model_path: PathBuf,
+        model_path: &Path,
         dtype: String,
         model_type: ModelType,
     ) -> Result<Self, BackendError> {
         // Check dtype
-        if &dtype == "float32" {
-        } else {
+        if dtype != "float32" {
             return Err(BackendError::Start(format!(
                 "DType {dtype} is not supported"
             )));
@@ -32,7 +31,7 @@ impl OrtBackend {
         let pool = match model_type {
             ModelType::Classifier => Pool::Cls,
             ModelType::Embedding(pool) => match pool {
-                Pool::Splade | Pool::LastToken => {
+                Pool::Splade => {
                     return Err(BackendError::Start(format!(
                         "Pooling {pool} is not supported for this backend. Use `candle` backend instead."
                     )));
@@ -167,8 +166,8 @@ impl Backend for OrtBackend {
 
         // Run model
         let outputs = self.session.run(inputs).e()?;
-        // Get last_hidden_state ndarray
 
+        // Get last_hidden_state ndarray
         let outputs = outputs
             .get("last_hidden_state")
             .or(outputs.get("token_embeddings"))
@@ -205,8 +204,13 @@ impl Backend for OrtBackend {
             let pooled_embeddings = match self.pool {
                 // CLS pooling
                 Pool::Cls => outputs.slice(s![.., 0, ..]).into_owned().into_dyn(),
-                // Last token pooling is not supported for this model
-                Pool::LastToken => unreachable!(),
+                Pool::LastToken => {
+                    let axis_len = outputs.len_of(Axis(1));
+                    outputs
+                        .slice(s![.., axis_len - 1, ..])
+                        .into_owned()
+                        .into_dyn()
+                }
                 // Mean pooling
                 Pool::Mean => {
                     if masking {
@@ -246,6 +250,7 @@ impl Backend for OrtBackend {
         if has_raw_requests {
             // Reshape outputs
             let s = outputs.shape().to_vec();
+            #[allow(deprecated)]
             let outputs = outputs.into_shape((s[0] * s[1], s[2])).e()?;
 
             // We need to remove the padding tokens only if batch_size > 1 and there are some
@@ -361,6 +366,7 @@ impl Backend for OrtBackend {
 
         // Run model
         let outputs = self.session.run(inputs).e()?;
+
         // Get last_hidden_state ndarray
         let outputs = outputs["logits"]
             .try_extract_tensor::<f32>()
