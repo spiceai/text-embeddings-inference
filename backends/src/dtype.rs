@@ -14,6 +14,8 @@ pub enum DType {
     Float16,
     #[cfg(any(feature = "python", feature = "candle", feature = "ort"))]
     Float32,
+    #[cfg(feature = "python")]
+    Bfloat16,
 }
 
 impl fmt::Display for DType {
@@ -30,6 +32,8 @@ impl fmt::Display for DType {
             // #[cfg(feature = "candle")]
             // DType::Q6K => write!(f, "q6k"),
             // _ => unreachable!(),
+            #[cfg(feature = "python")]
+            DType::Bfloat16 => write!(f, "bfloat16"),
         }
     }
 }
@@ -37,23 +41,22 @@ impl fmt::Display for DType {
 #[allow(clippy::derivable_impls)]
 impl Default for DType {
     fn default() -> Self {
-        #[cfg(any(
-            feature = "accelerate",
-            feature = "mkl",
-            feature = "mkl-dynamic",
-            feature = "ort"
-        ))]
+        #[cfg(any(feature = "accelerate", feature = "mkl", feature = "ort"))]
         {
             DType::Float32
         }
         #[cfg(not(any(
             feature = "accelerate",
             feature = "mkl",
-            feature = "mkl-dynamic",
-            feature = "ort"
+            feature = "ort",
+            feature = "python"
         )))]
         {
             DType::Float16
+        }
+        #[cfg(feature = "python")]
+        {
+            DType::Bfloat16
         }
     }
 }
