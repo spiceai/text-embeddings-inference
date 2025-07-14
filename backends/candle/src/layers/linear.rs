@@ -7,8 +7,19 @@ use serde::Deserialize;
 pub enum HiddenAct {
     Gelu,
     Relu,
-    #[serde(alias = "silu")]
+    Silu,
     Swiglu,
+}
+
+impl HiddenAct {
+    pub fn forward(&self, x: &Tensor) -> Result<Tensor> {
+        match self {
+            Self::Gelu => x.gelu(),
+            Self::Relu => x.relu(),
+            Self::Silu => x.silu(),
+            Self::Swiglu => candle_nn::ops::swiglu(x),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -70,6 +81,7 @@ impl Linear {
                 match act {
                     HiddenAct::Gelu => x.gelu(),
                     HiddenAct::Relu => x.relu(),
+                    HiddenAct::Silu => x.silu(),
                     HiddenAct::Swiglu => candle_nn::ops::swiglu(&x),
                 }
             } else {

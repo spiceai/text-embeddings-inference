@@ -10,7 +10,7 @@ use crate::http::types::{
     VertexResponse,
 };
 use crate::{
-    shutdown, ClassifierModel, EmbeddingModel, ErrorResponse, ErrorType, Info, ModelType,
+    logging, shutdown, ClassifierModel, EmbeddingModel, ErrorResponse, ErrorType, Info, ModelType,
     ResponseMetadata,
 };
 use ::http::HeaderMap;
@@ -34,10 +34,12 @@ use text_embeddings_backend::BackendError;
 use text_embeddings_core::infer::{
     AllEmbeddingsInferResponse, Infer, InferMetadata, PooledEmbeddingsInferResponse,
 };
+use text_embeddings_core::tokenization::{into_tokens, SimpleToken as CoreSimpleToken};
 use text_embeddings_core::TextEmbeddingsError;
 use tokio::sync::OwnedSemaphorePermit;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::instrument;
+use tracing_opentelemetry::OpenTelemetrySpanExt;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -102,9 +104,14 @@ example = json ! ({"error": "Batch size error", "error_type": "validation"})),
 async fn predict(
     infer: Extension<Infer>,
     info: Extension<Info>,
+    Extension(context): Extension<Option<opentelemetry::Context>>,
     Json(req): Json<PredictRequest>,
 ) -> Result<(HeaderMap, Json<PredictResponse>), (StatusCode, Json<ErrorResponse>)> {
     let span = tracing::Span::current();
+    if let Some(context) = context {
+        span.set_parent(context);
+    }
+
     let start_time = Instant::now();
 
     // Closure for predict
@@ -300,9 +307,14 @@ example = json ! ({"error": "Batch size error", "error_type": "validation"})),
 async fn rerank(
     infer: Extension<Infer>,
     info: Extension<Info>,
+    Extension(context): Extension<Option<opentelemetry::Context>>,
     Json(req): Json<RerankRequest>,
 ) -> Result<(HeaderMap, Json<RerankResponse>), (StatusCode, Json<ErrorResponse>)> {
     let span = tracing::Span::current();
+    if let Some(context) = context {
+        span.set_parent(context);
+    }
+
     let start_time = Instant::now();
 
     if req.texts.is_empty() {
@@ -488,6 +500,7 @@ example = json ! ({"error": "Batch size error", "error_type": "validation"})),
 async fn similarity(
     infer: Extension<Infer>,
     info: Extension<Info>,
+    context: Extension<Option<opentelemetry::Context>>,
     Json(req): Json<SimilarityRequest>,
 ) -> Result<(HeaderMap, Json<SimilarityResponse>), (StatusCode, Json<ErrorResponse>)> {
     if req.inputs.sentences.is_empty() {
@@ -534,7 +547,7 @@ async fn similarity(
     };
 
     // Get embeddings
-    let (header_map, embed_response) = embed(infer, info, Json(embed_req)).await?;
+    let (header_map, embed_response) = embed(infer, info, context, Json(embed_req)).await?;
     let embeddings = embed_response.0 .0;
 
     // Compute cosine
@@ -572,17 +585,21 @@ example = json ! ({"error": "Batch size error", "error_type": "validation"})),
 async fn embed(
     infer: Extension<Infer>,
     info: Extension<Info>,
+    Extension(context): Extension<Option<opentelemetry::Context>>,
     Json(req): Json<EmbedRequest>,
 ) -> Result<(HeaderMap, Json<EmbedResponse>), (StatusCode, Json<ErrorResponse>)> {
     let span = tracing::Span::current();
+    if let Some(context) = context {
+        span.set_parent(context);
+    }
+
     let start_time = Instant::now();
 
     let truncate = req.truncate.unwrap_or(info.auto_truncate);
 
     let (response, metadata) = match req.inputs {
         Input::Single(input) => {
-            let counter = metrics::counter!("te_request_count", "method" => "single");
-            counter.increment(1);
+            metrics::counter!("te_request_count", "method" => "single").increment(1);
 
             let compute_chars = input.count_chars();
 
@@ -599,8 +616,7 @@ async fn embed(
                 .await
                 .map_err(ErrorResponse::from)?;
 
-            let counter = metrics::counter!("te_request_count", "method" => "single");
-            counter.increment(1);
+            metrics::counter!("te_request_success", "method" => "single").increment(1);
 
             (
                 EmbedResponse(vec![response.results]),
@@ -743,9 +759,14 @@ example = json ! ({"error": "Batch size error", "error_type": "validation"})),
 async fn embed_sparse(
     infer: Extension<Infer>,
     info: Extension<Info>,
+    Extension(context): Extension<Option<opentelemetry::Context>>,
     Json(req): Json<EmbedSparseRequest>,
 ) -> Result<(HeaderMap, Json<EmbedSparseResponse>), (StatusCode, Json<ErrorResponse>)> {
     let span = tracing::Span::current();
+    if let Some(context) = context {
+        span.set_parent(context);
+    }
+
     let start_time = Instant::now();
 
     let sparsify = |values: Vec<f32>| {
@@ -761,8 +782,7 @@ async fn embed_sparse(
 
     let (response, metadata) = match req.inputs {
         Input::Single(input) => {
-            let counter = metrics::counter!("te_request_count", "method" => "single");
-            counter.increment(1);
+            metrics::counter!("te_request_count", "method" => "single").increment(1);
 
             let compute_chars = input.count_chars();
 
@@ -778,8 +798,7 @@ async fn embed_sparse(
                 .await
                 .map_err(ErrorResponse::from)?;
 
-            let counter = metrics::counter!("te_request_count", "method" => "single");
-            counter.increment(1);
+            metrics::counter!("te_request_success", "method" => "single").increment(1);
 
             (
                 EmbedSparseResponse(vec![sparsify(response.results)]),
@@ -923,17 +942,21 @@ example = json ! ({"error": "Batch size error", "error_type": "validation"})),
 async fn embed_all(
     infer: Extension<Infer>,
     info: Extension<Info>,
+    Extension(context): Extension<Option<opentelemetry::Context>>,
     Json(req): Json<EmbedAllRequest>,
 ) -> Result<(HeaderMap, Json<EmbedAllResponse>), (StatusCode, Json<ErrorResponse>)> {
     let span = tracing::Span::current();
+    if let Some(context) = context {
+        span.set_parent(context);
+    }
+
     let start_time = Instant::now();
 
     let truncate = req.truncate.unwrap_or(info.auto_truncate);
 
     let (response, metadata) = match req.inputs {
         Input::Single(input) => {
-            let counter = metrics::counter!("te_request_count", "method" => "single");
-            counter.increment(1);
+            metrics::counter!("te_request_count", "method" => "single").increment(1);
 
             let compute_chars = input.count_chars();
 
@@ -949,8 +972,7 @@ async fn embed_all(
                 .await
                 .map_err(ErrorResponse::from)?;
 
-            let counter = metrics::counter!("te_request_count", "method" => "single");
-            counter.increment(1);
+            metrics::counter!("te_request_success", "method" => "single").increment(1);
 
             (
                 EmbedAllResponse(vec![response.results]),
@@ -1092,6 +1114,7 @@ example = json ! ({"message": "Batch size error", "type": "validation"})),
 async fn openai_embed(
     infer: Extension<Infer>,
     info: Extension<Info>,
+    Extension(context): Extension<Option<opentelemetry::Context>>,
     Json(req): Json<OpenAICompatRequest>,
 ) -> Result<(HeaderMap, Json<OpenAICompatResponse>), (StatusCode, Json<OpenAICompatErrorResponse>)>
 {
@@ -1111,14 +1134,17 @@ async fn openai_embed(
     };
 
     let span = tracing::Span::current();
+    if let Some(context) = context {
+        span.set_parent(context);
+    }
+
     let start_time = Instant::now();
 
     let truncate = info.auto_truncate;
 
     let (embeddings, metadata) = match req.input {
         Input::Single(input) => {
-            let counter = metrics::counter!("te_request_count", "method" => "single");
-            counter.increment(1);
+            metrics::counter!("te_request_count", "method" => "single").increment(1);
 
             let compute_chars = input.count_chars();
 
@@ -1135,8 +1161,7 @@ async fn openai_embed(
                 .await
                 .map_err(ErrorResponse::from)?;
 
-            let counter = metrics::counter!("te_request_count", "method" => "single");
-            counter.increment(1);
+            metrics::counter!("te_request_success", "method" => "single").increment(1);
 
             let embedding = encode_embedding(response.results);
             (
@@ -1303,32 +1328,22 @@ async fn tokenize(
             .map_err(ErrorResponse::from)?;
         let input = encoded_input.unwrap_or(input);
 
-        let tokens: Vec<SimpleToken> = encoding
-            .get_ids()
-            .iter()
-            .zip(encoding.get_offsets())
-            .zip(encoding.get_special_tokens_mask())
-            .zip(encoding.get_tokens())
-            .map(|(((&id, &(start, stop)), special), token)| {
-                let special = *special == 1;
-                match special {
-                    true => SimpleToken {
-                        id,
-                        text: token.clone(),
-                        special,
-                        start: None,
-                        stop: None,
-                    },
-                    false => {
-                        let text: String = input.chars().skip(start).take(stop - start).collect();
-                        SimpleToken {
-                            id,
-                            text,
-                            special,
-                            start: Some(start),
-                            stop: Some(stop),
-                        }
-                    }
+        let tokens: Vec<SimpleToken> = into_tokens(encoding, &input)
+            .into_iter()
+            .map(|t| {
+                let CoreSimpleToken {
+                    id,
+                    text,
+                    special,
+                    start,
+                    stop,
+                } = t;
+                SimpleToken {
+                    id,
+                    text,
+                    special,
+                    start,
+                    stop,
                 }
             })
             .collect();
@@ -1486,36 +1501,47 @@ example = json ! ({"error": "Batch size error", "error_type": "validation"})),
 async fn vertex_compatibility(
     infer: Extension<Infer>,
     info: Extension<Info>,
+    context: Extension<Option<opentelemetry::Context>>,
     Json(req): Json<VertexRequest>,
 ) -> Result<Json<VertexResponse>, (StatusCode, Json<ErrorResponse>)> {
-    let embed_future = move |infer: Extension<Infer>, info: Extension<Info>, req: EmbedRequest| async move {
-        let result = embed(infer, info, Json(req)).await?;
+    let embed_future = move |infer: Extension<Infer>,
+                             info: Extension<Info>,
+                             context: Extension<Option<opentelemetry::Context>>,
+                             req: EmbedRequest| async move {
+        let result = embed(infer, info, context, Json(req)).await?;
         Ok(VertexPrediction::Embed(result.1 .0))
     };
-    let embed_sparse_future =
-        move |infer: Extension<Infer>, info: Extension<Info>, req: EmbedSparseRequest| async move {
-            let result = embed_sparse(infer, info, Json(req)).await?;
-            Ok(VertexPrediction::EmbedSparse(result.1 .0))
-        };
-    let predict_future =
-        move |infer: Extension<Infer>, info: Extension<Info>, req: PredictRequest| async move {
-            let result = predict(infer, info, Json(req)).await?;
-            Ok(VertexPrediction::Predict(result.1 .0))
-        };
-    let rerank_future =
-        move |infer: Extension<Infer>, info: Extension<Info>, req: RerankRequest| async move {
-            let result = rerank(infer, info, Json(req)).await?;
-            Ok(VertexPrediction::Rerank(result.1 .0))
-        };
+    let embed_sparse_future = move |infer: Extension<Infer>,
+                                    info: Extension<Info>,
+                                    context: Extension<Option<opentelemetry::Context>>,
+                                    req: EmbedSparseRequest| async move {
+        let result = embed_sparse(infer, info, context, Json(req)).await?;
+        Ok(VertexPrediction::EmbedSparse(result.1 .0))
+    };
+    let predict_future = move |infer: Extension<Infer>,
+                               info: Extension<Info>,
+                               context: Extension<Option<opentelemetry::Context>>,
+                               req: PredictRequest| async move {
+        let result = predict(infer, info, context, Json(req)).await?;
+        Ok(VertexPrediction::Predict(result.1 .0))
+    };
+    let rerank_future = move |infer: Extension<Infer>,
+                              info: Extension<Info>,
+                              context: Extension<Option<opentelemetry::Context>>,
+                              req: RerankRequest| async move {
+        let result = rerank(infer, info, context, Json(req)).await?;
+        Ok(VertexPrediction::Rerank(result.1 .0))
+    };
 
     let mut futures = Vec::with_capacity(req.instances.len());
     for instance in req.instances {
         let local_infer = infer.clone();
         let local_info = info.clone();
+        let local_context = context.clone();
 
         // Rerank is the only payload that can me matched safely
         if let Ok(instance) = serde_json::from_value::<RerankRequest>(instance.clone()) {
-            futures.push(rerank_future(local_infer, local_info, instance).boxed());
+            futures.push(rerank_future(local_infer, local_info, local_context, instance).boxed());
             continue;
         }
 
@@ -1523,17 +1549,23 @@ async fn vertex_compatibility(
             ModelType::Classifier(_) | ModelType::Reranker(_) => {
                 let instance = serde_json::from_value::<PredictRequest>(instance)
                     .map_err(ErrorResponse::from)?;
-                futures.push(predict_future(local_infer, local_info, instance).boxed());
+                futures
+                    .push(predict_future(local_infer, local_info, local_context, instance).boxed());
             }
             ModelType::Embedding(_) => {
                 if infer.is_splade() {
                     let instance = serde_json::from_value::<EmbedSparseRequest>(instance)
                         .map_err(ErrorResponse::from)?;
-                    futures.push(embed_sparse_future(local_infer, local_info, instance).boxed());
+                    futures.push(
+                        embed_sparse_future(local_infer, local_info, local_context, instance)
+                            .boxed(),
+                    );
                 } else {
                     let instance = serde_json::from_value::<EmbedRequest>(instance)
                         .map_err(ErrorResponse::from)?;
-                    futures.push(embed_future(local_infer, local_info, instance).boxed());
+                    futures.push(
+                        embed_future(local_infer, local_info, local_context, instance).boxed(),
+                    );
                 }
             }
         }
@@ -1801,6 +1833,9 @@ pub async fn run(
         .layer(Extension(info))
         .layer(Extension(prom_handle.clone()))
         .layer(OtelAxumLayer::default())
+        .layer(axum::middleware::from_fn(
+            logging::http::trace_context_middleware,
+        ))
         .layer(DefaultBodyLimit::max(payload_limit))
         .layer(cors_layer);
 

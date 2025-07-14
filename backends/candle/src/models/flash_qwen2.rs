@@ -1,8 +1,9 @@
 use crate::flash_attn::flash_attn_varlen;
-use crate::layers::{HiddenAct, Linear, RMSNorm};
+use crate::layers::{get_cos_sin, get_inv_freqs, HiddenAct, Linear, RMSNorm};
 use crate::models::{Model, Qwen2Config};
 use candle::{DType, Device, IndexOp, Result, Tensor};
 use candle_nn::{Embedding, Module, VarBuilder};
+use candle_rotary::apply_rotary_inplace;
 use text_embeddings_backend_core::{Batch, ModelType, Pool};
 
 struct Qwen2Attention {
@@ -21,7 +22,7 @@ struct Qwen2Attention {
 impl Qwen2Attention {
     pub fn load(vb: VarBuilder, config: &Qwen2Config) -> Result<Self> {
         if config.use_sliding_window {
-            candle::bail!("Sliding window is not supported");
+            candle::bail!("Sliding window is not supported for Qwen2",);
         }
 
         let num_attention_heads = config.num_attention_heads;
@@ -98,7 +99,7 @@ impl Qwen2Attention {
             self.num_key_value_heads,
         )?;
 
-        candle_rotary::apply_rotary_inplace(&q, &k, &cos, &sin, true)?;
+        apply_rotary_inplace(&q, &k, &cos, &sin, true)?;
 
         let attention = flash_attn_varlen(
             &q,
@@ -111,6 +112,7 @@ impl Qwen2Attention {
             max_s,
             self.softmax_scale,
             false,
+            None,
             None,
         )?;
         let attention = attention.flatten_from(candle::D::Minus2)?;
@@ -165,11 +167,7 @@ impl Qwen2MLP {
         let gate_states = gate_up_states.narrow(1, 0, self.intermediate_size)?;
         let up_states = gate_up_states.narrow(1, self.intermediate_size, self.intermediate_size)?;
 
-        let gate_states = match self.act {
-            HiddenAct::Gelu => gate_states.gelu(),
-            HiddenAct::Relu => gate_states.relu(),
-            HiddenAct::Swiglu => gate_states.silu(),
-        }?;
+        let gate_states = self.act.forward(&gate_states)?;
         let r = self.down_proj.forward(&(gate_states * up_states)?);
         r
     }
@@ -263,7 +261,15 @@ impl FlashQwen2Model {
             ModelType::Embedding(pool) => pool,
         };
 
-        let vb = vb.pp("model");
+        // Pushing the prefix for `model` is apparently only required if the model architecture is
+        // ForCausalLM as it contains the `lm_head`, other than that, the `model` key won't be
+        // present e.g. a model without the `model` key as it's a `Qwen2Model` instance not a
+        // `Qwen2ModelForCausalLM` is https://huggingface.co/mims-harvard/ToolRAG-T1-GTE-Qwen2-1.5B
+        let vb = if vb.contains_tensor("model.embed_tokens.weight") {
+            vb.pp("model")
+        } else {
+            vb
+        };
 
         let embeddings = Embedding::new(
             vb.pp("embed_tokens")
@@ -277,13 +283,18 @@ impl FlashQwen2Model {
 
         let norm = RMSNorm::load(vb.pp("norm"), config.hidden_size, config.rms_norm_eps)?;
 
-        let inv_freqs = candle_rotary::inv_freqs(
+        let inv_freqs = get_inv_freqs(
             layers[0].attention.attention_head_size,
             config.rope_theta,
             vb.device(),
+            None,
         )?;
-        let (cos_cache, sin_cache) =
-            candle_rotary::cos_sin(config.max_position_embeddings, &inv_freqs, vb.dtype())?;
+        let (cos_cache, sin_cache) = get_cos_sin(
+            config.max_position_embeddings,
+            &inv_freqs,
+            vb.dtype(),
+            false,
+        )?;
 
         Ok(Self {
             embeddings,
