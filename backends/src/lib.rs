@@ -637,7 +637,7 @@ enum ModuleType {
 
 #[cfg(feature = "candle")]
 #[derive(Debug, Clone, Deserialize)]
-struct ModuleConfig {
+pub struct ModuleConfig {
     #[allow(dead_code)]
     idx: usize,
     #[allow(dead_code)]

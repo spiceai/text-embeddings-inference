@@ -3,13 +3,11 @@ use hf_hub::api::sync::{ApiBuilder, ApiError, ApiRepo};
 use hf_hub::{Repo, RepoType};
 use insta::internals::YamlMatcher;
 use serde::{Deserialize, Serialize};
-use std::cmp::max;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
-use text_embeddings_backend_core::{Batch, Embedding, Embeddings};
 use tokenizers::pre_tokenizers::metaspace::PrependScheme;
 use tokenizers::pre_tokenizers::sequence::Sequence;
-use tokenizers::{Encoding, PreTokenizerWrapper, Tokenizer};
+use tokenizers::{PreTokenizerWrapper, Tokenizer};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Score(f32);
@@ -87,6 +85,29 @@ impl From<Vec<Vec<f32>>> for SnapshotEmbeddings {
     fn from(value: Vec<Vec<f32>>) -> Self {
         Self(value.into_iter().map(|v| SnapEmbedding(v)).collect())
     }
+}
+
+#[derive(Deserialize, PartialEq)]
+enum ModuleType {
+    #[serde(rename = "sentence_transformers.models.Dense")]
+    Dense,
+    #[serde(rename = "sentence_transformers.models.Normalize")]
+    Normalize,
+    #[serde(rename = "sentence_transformers.models.Pooling")]
+    Pooling,
+    #[serde(rename = "sentence_transformers.models.Transformer")]
+    Transformer,
+}
+
+#[derive(Deserialize)]
+struct ModuleConfig {
+    #[allow(dead_code)]
+    idx: usize,
+    #[allow(dead_code)]
+    name: String,
+    path: String,
+    #[serde(rename = "type")]
+    module_type: ModuleType,
 }
 
 pub fn download_artifacts(
