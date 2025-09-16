@@ -1,21 +1,24 @@
 mod common;
 
-use crate::common::{sort_embeddings, SnapshotEmbeddings};
+use crate::common::SnapshotEmbeddings;
 use anyhow::Result;
-use common::{batch, cosine_matcher, download_artifacts, load_tokenizer};
+use common::{cosine_matcher, download_artifacts, load_tokenizer};
 use text_embeddings_backend_candle::CandleBackend;
+use text_embeddings_backend_candle::{batch, sort_embeddings};
 use text_embeddings_backend_core::{Backend, ModelType, Pool};
 
 #[test]
 #[serial_test::serial]
 fn test_mpnet() -> Result<()> {
-    let model_root = download_artifacts("sentence-transformers/all-mpnet-base-v2", None)?;
+    let (model_root, _) =
+        download_artifacts("sentence-transformers/all-mpnet-base-v2", None, None)?;
     let tokenizer = load_tokenizer(&model_root)?;
 
     let backend = CandleBackend::new(
         &model_root,
         "float32".to_string(),
         ModelType::Embedding(Pool::Mean),
+        None,
     )?;
 
     let input_batch = batch(
@@ -69,13 +72,15 @@ fn test_mpnet() -> Result<()> {
 #[test]
 #[serial_test::serial]
 fn test_mpnet_pooled_raw() -> Result<()> {
-    let model_root = download_artifacts("sentence-transformers/all-mpnet-base-v2", None)?;
+    let (model_root, _) =
+        download_artifacts("sentence-transformers/all-mpnet-base-v2", None, None)?;
     let tokenizer = load_tokenizer(&model_root)?;
 
     let backend = CandleBackend::new(
         &model_root,
         "float32".to_string(),
         ModelType::Embedding(Pool::Cls),
+        None,
     )?;
 
     let input_batch = batch(

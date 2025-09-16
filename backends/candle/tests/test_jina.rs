@@ -1,20 +1,22 @@
 mod common;
 
-use crate::common::{sort_embeddings, SnapshotEmbeddings, SnapshotScores};
+use crate::common::{SnapshotEmbeddings, SnapshotScores};
 use anyhow::Result;
-use common::{batch, cosine_matcher, download_artifacts, load_tokenizer, relative_matcher};
+use common::{cosine_matcher, download_artifacts, load_tokenizer, relative_matcher};
 use text_embeddings_backend_candle::CandleBackend;
+use text_embeddings_backend_candle::{batch, sort_embeddings};
 use text_embeddings_backend_core::{Backend, ModelType, Pool};
 
 #[test]
 fn test_jina_small() -> Result<()> {
-    let model_root = download_artifacts("jinaai/jina-embeddings-v2-small-en", None)?;
+    let (model_root, _) = download_artifacts("jinaai/jina-embeddings-v2-small-en", None, None)?;
     let tokenizer = load_tokenizer(&model_root)?;
 
     let backend = CandleBackend::new(
         &model_root,
         "float32".to_string(),
         ModelType::Embedding(Pool::Mean),
+        None,
     )?;
 
     let input_batch = batch(
@@ -52,10 +54,16 @@ fn test_jina_small() -> Result<()> {
 #[test]
 #[serial_test::serial]
 fn test_jina_rerank() -> Result<()> {
-    let model_root = download_artifacts("jinaai/jina-reranker-v1-tiny-en", Some("refs/pr/11"))?;
+    let (model_root, _) =
+        download_artifacts("jinaai/jina-reranker-v1-tiny-en", Some("refs/pr/11"), None)?;
     let tokenizer = load_tokenizer(&model_root)?;
 
-    let backend = CandleBackend::new(&model_root, "float32".to_string(), ModelType::Classifier)?;
+    let backend = CandleBackend::new(
+        &model_root,
+        "float32".to_string(),
+        ModelType::Classifier,
+        None,
+    )?;
 
     let input_single = batch(
         vec![tokenizer.encode("What is Deep Learning?", true).unwrap()],

@@ -54,6 +54,7 @@ pub async fn run(
     auto_truncate: bool,
     default_prompt: Option<String>,
     default_prompt_name: Option<String>,
+    dense_path: Option<String>,
     hf_token: Option<String>,
     hostname: Option<String>,
     port: u16,
@@ -228,8 +229,14 @@ pub async fn run(
         prompts,
     );
 
-    // Get dtype
-    let dtype = dtype.unwrap_or_default();
+    // NOTE: `gemma3_text` won't support Float16 but only Float32, given that with `candle-cuda`
+    // feature, the default `Dtype::Float16` this overrides that to prevent issues when running a
+    // `gemma3_text` model without specifying a `--dtype`
+    let dtype = if dtype.is_none() && config.model_type == "gemma3_text" {
+        DType::Float32
+    } else {
+        dtype.unwrap_or_default()
+    };
 
     // Create backend
     tracing::info!("Starting model backend");
@@ -238,6 +245,7 @@ pub async fn run(
         api_repo,
         dtype.clone(),
         backend_model_type,
+        dense_path,
         uds_path.unwrap_or("/tmp/text-embeddings-inference-server".to_string()),
         otlp_endpoint.clone(),
         otlp_service_name.clone(),
@@ -405,6 +413,7 @@ fn get_backend_model_type(
             }
         }
     };
+
     Ok(text_embeddings_backend::ModelType::Embedding(pool))
 }
 

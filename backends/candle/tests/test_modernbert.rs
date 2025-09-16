@@ -1,23 +1,25 @@
 mod common;
 
-use crate::common::{sort_embeddings, SnapshotEmbeddings};
+use crate::common::SnapshotEmbeddings;
 use anyhow::Result;
 use common::{
-    batch, cosine_matcher, download_artifacts, load_tokenizer, relative_matcher, SnapshotScores,
+    cosine_matcher, download_artifacts, load_tokenizer, relative_matcher, SnapshotScores,
 };
 use text_embeddings_backend_candle::CandleBackend;
+use text_embeddings_backend_candle::{batch, sort_embeddings};
 use text_embeddings_backend_core::{Backend, ModelType, Pool};
 
 #[test]
 #[serial_test::serial]
 fn test_modernbert() -> Result<()> {
-    let model_root = download_artifacts("answerdotai/ModernBERT-base", None)?;
+    let (model_root, _) = download_artifacts("answerdotai/ModernBERT-base", None, None)?;
     let tokenizer = load_tokenizer(&model_root)?;
 
     let backend = CandleBackend::new(
         &model_root,
         "float32".to_string(),
         ModelType::Embedding(Pool::Mean),
+        None,
     )?;
 
     let input_batch = batch(
@@ -79,13 +81,14 @@ fn test_modernbert() -> Result<()> {
 #[test]
 #[serial_test::serial]
 fn test_modernbert_pooled_raw() -> Result<()> {
-    let model_root = download_artifacts("answerdotai/ModernBERT-base", None)?;
+    let (model_root, _) = download_artifacts("answerdotai/ModernBERT-base", None, None)?;
     let tokenizer = load_tokenizer(&model_root)?;
 
     let backend = CandleBackend::new(
         &model_root,
         "float32".to_string(),
         ModelType::Embedding(Pool::Cls),
+        None,
     )?;
 
     let input_batch = batch(
@@ -173,10 +176,16 @@ fn test_modernbert_pooled_raw() -> Result<()> {
 #[test]
 #[serial_test::serial]
 fn test_modernbert_classification() -> Result<()> {
-    let model_root = download_artifacts("Alibaba-NLP/gte-reranker-modernbert-base", None).unwrap();
+    let (model_root, _) =
+        download_artifacts("Alibaba-NLP/gte-reranker-modernbert-base", None, None)?;
     let tokenizer = load_tokenizer(&model_root)?;
 
-    let backend = CandleBackend::new(&model_root, "float32".to_string(), ModelType::Classifier)?;
+    let backend = CandleBackend::new(
+        &model_root,
+        "float32".to_string(),
+        ModelType::Classifier,
+        None,
+    )?;
 
     let input_single = batch(
         vec![tokenizer
@@ -206,9 +215,16 @@ fn test_modernbert_classification() -> Result<()> {
 #[test]
 #[serial_test::serial]
 fn test_modernbert_classification_mean_pooling() -> Result<()> {
-    let model_root = download_artifacts("tomaarsen/reranker-ModernBERT-large-gooaq-bce", None)?;
+    let (model_root, _) =
+        download_artifacts("tomaarsen/reranker-ModernBERT-large-gooaq-bce", None, None)?;
     let tokenizer = load_tokenizer(&model_root)?;
-    let backend = CandleBackend::new(&model_root, "float32".to_string(), ModelType::Classifier)?;
+
+    let backend = CandleBackend::new(
+        &model_root,
+        "float32".to_string(),
+        ModelType::Classifier,
+        None,
+    )?;
 
     let input_single = batch(
         vec![tokenizer

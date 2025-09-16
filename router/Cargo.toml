@@ -106,7 +106,7 @@ grpc = [
     "dep:tokio-stream",
 ]
 metal = ["text-embeddings-backend/metal"]
-mkl = ["text-embeddings-backend/mkl"]
+mkl = ["text-embeddings-backend/mkl", "dep:intel-mkl-src"]
 accelerate = ["text-embeddings-backend/accelerate"]
 python = ["text-embeddings-backend/python"]
 ort = ["text-embeddings-backend/ort"]
