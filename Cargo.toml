@@ -22,7 +22,7 @@ default-members = [
 resolver = "2"
 
 [workspace.package]
-version = "1.8.3"
+version = "1.9.3"
 edition = "2021"
 authors = ["Olivier Dehaene", "Nicolas Patry", "Alvaro Bartolome"]
 homepage = "https://github.com/huggingface/text-embeddings-inference"
@@ -56,12 +56,13 @@ serial_test = "2.0.0"
 #     "cuda-12020",
 # ], default-features = false }
 intel-mkl-src = { version = "0.8", default-features = false }
-candle = { version = "0.8", package = "candle-core" }
+candle = { version = "0.10", package = "candle-core" }
 # candle-nn = { version = "0.8" }
 # candle-transformers = { version = "0.8" }
 # candle-flash-attn = { version = "0.8" }
 # candle-cublaslt = { version = "0.0.1" }
 # candle-layer-norm = { version = "0.0.1" }
+# candle-index-select-cu = { version = "0.0.1", features = ["cuda-11"], default-features = false }
 # candle-rotary = { version = "0.0.1" }
 # candle-flash-attn-v1 = { version = "0.0.1" }
 
@@ -74,6 +75,7 @@ candle-flash-attn-v1 = { git = "https://github.com/huggingface/candle-flash-attn
 candle-cublaslt = { git = "https://github.com/spiceai/candle-cublaslt", rev = "72be72013e9b9ba69a066aa1920b13255d43959b" }               # , optional = true }
 cudarc = { git = "https://github.com/EricLBuehler/cudarc", rev = "34834440ada40a7c53d46d45b65d5e42c5f5d903" }                            #, optional = true }
 candle-rotary = { git = "https://github.com/spiceai/candle-rotary", rev = "8a437f99881bd4803f61c7c16ed4367f7cab76fc" }                   #, optional = true }
+candle-index-select-cu = { version = "0.0.1", features = ["cuda-11"], default-features = false }
 
 candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev = "88b9ffdd7077fce11d3f6cb77bbe7093269631fe" } #, optional = true }
 
@@ -82,10 +84,10 @@ candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev 
 # cudarc = { git = "https://github.com/Narsil/cudarc", rev = "8b4f18b4bcd5e4b1a9daf40abc3a2e27f83f06e9" }
 cudarc = { git = "https://github.com/EricLBuehler/cudarc", rev = "34834440ada40a7c53d46d45b65d5e42c5f5d903" }
 #
-candle = { git = "https://github.com/huggingface/candle", rev = "6381023982251959a2c9bab7378b3013304e192b", package = "candle-core" }
-candle-nn = { git = "https://github.com/huggingface/candle", rev = "6381023982251959a2c9bab7378b3013304e192b", package = "candle-nn" }
-candle-transformers = { git = "https://github.com/huggingface/candle", rev = "6381023982251959a2c9bab7378b3013304e192b", package = "candle-transformers" }
-candle-flash-attn = { git = "https://github.com/huggingface/candle", rev = "6381023982251959a2c9bab7378b3013304e192b", package = "candle-flash-attn" }
+candle = { git = "https://github.com/spiceai/candle", rev = "fab4da8172a997bc6dfb4100a51a72d1a7a37988", package = "candle-core" }
+candle-nn = { git = "https://github.com/spiceai/candle", rev = "fab4da8172a997bc6dfb4100a51a72d1a7a37988", package = "candle-nn" }
+candle-transformers = { git = "https://github.com/spiceai/candle", rev = "fab4da8172a997bc6dfb4100a51a72d1a7a37988", package = "candle-transformers" }
+candle-flash-attn = { git = "https://github.com/spiceai/candle", rev = "fab4da8172a997bc6dfb4100a51a72d1a7a37988", package = "candle-flash-attn" }
 [profile.release]
 debug = 0
 lto = "fat"
