@@ -3,7 +3,7 @@ name: Run integration tests
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'  # Run the workflow nightly to check Gaudi integration is working
+    - cron: "0 0 * * *" # Run the workflow nightly to check Gaudi integration is working
 
 jobs:
   tests:
@@ -14,7 +14,7 @@ jobs:
       group: itac-bm-emr-gaudi3-dell-1gaudi
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5

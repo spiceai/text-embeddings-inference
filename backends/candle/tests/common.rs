@@ -3,11 +3,13 @@ use hf_hub::api::sync::{ApiBuilder, ApiError, ApiRepo};
 use hf_hub::{Repo, RepoType};
 use insta::internals::YamlMatcher;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use text_embeddings_backend_core::{Batch, Embedding, Embeddings};
 use tokenizers::pre_tokenizers::metaspace::PrependScheme;
 use tokenizers::pre_tokenizers::sequence::Sequence;
-use tokenizers::{PreTokenizerWrapper, Tokenizer};
+use tokenizers::{Encoding, PreTokenizerWrapper, Tokenizer};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Score(f32);
@@ -83,7 +85,7 @@ impl Deref for SnapshotEmbeddings {
 
 impl From<Vec<Vec<f32>>> for SnapshotEmbeddings {
     fn from(value: Vec<Vec<f32>>) -> Self {
-        Self(value.into_iter().map(|v| SnapEmbedding(v)).collect())
+        Self(value.into_iter().map(SnapEmbedding).collect())
     }
 }
 
@@ -165,7 +167,7 @@ pub fn download_artifacts(
                 }
                 _ => {
                     for path in &paths {
-                        download_dense_module(&api_repo, &path)?;
+                        download_dense_module(&api_repo, path)?;
                     }
                     Some(paths)
                 }
@@ -256,6 +258,7 @@ pub(crate) fn relative_matcher() -> YamlMatcher<SnapshotScores> {
     YamlMatcher::new()
 }
 
+#[allow(unused)]
 pub fn cosine_matcher() -> YamlMatcher<SnapshotEmbeddings> {
     YamlMatcher::new()
 }
@@ -304,4 +307,50 @@ pub fn load_tokenizer(model_root: &Path) -> Result<Tokenizer> {
 
     tokenizer.with_padding(None);
     Ok(tokenizer)
+}
+
+#[allow(unused)]
+pub fn sort_embeddings(embeddings: Embeddings) -> (Vec<Vec<f32>>, Vec<Vec<f32>>) {
+    let mut pooled_embeddings = Vec::new();
+    let mut raw_embeddings = Vec::new();
+
+    for (_, embedding) in embeddings {
+        match embedding {
+            Embedding::Pooled(e) => pooled_embeddings.push(e),
+            Embedding::All(e) => raw_embeddings.extend(e),
+        }
+    }
+
+    (pooled_embeddings, raw_embeddings)
+}
+
+pub fn batch(encodings: Vec<Encoding>, pooled_indices: Vec<u32>, raw_indices: Vec<u32>) -> Batch {
+    let mut input_ids = Vec::new();
+    let mut token_type_ids = Vec::new();
+    let mut position_ids = Vec::new();
+    let mut cumulative_seq_lengths = Vec::with_capacity(encodings.len() + 1);
+    cumulative_seq_lengths.push(0);
+
+    let mut max_length = 0;
+    let mut cumulative_length = 0;
+
+    for encoding in encodings.iter() {
+        let encoding_length = encoding.len() as u32;
+        input_ids.extend(encoding.get_ids().to_vec());
+        token_type_ids.extend(encoding.get_type_ids().to_vec());
+        position_ids.extend(0..encoding_length);
+        cumulative_length += encoding_length;
+        cumulative_seq_lengths.push(cumulative_length);
+        max_length = max(max_length, encoding_length);
+    }
+
+    Batch {
+        input_ids,
+        token_type_ids,
+        position_ids,
+        cumulative_seq_lengths,
+        max_length,
+        pooled_indices,
+        raw_indices,
+    }
 }

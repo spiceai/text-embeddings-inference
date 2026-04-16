@@ -46,6 +46,7 @@ pub async fn run(
     revision: Option<String>,
     tokenization_workers: Option<usize>,
     dtype: Option<DType>,
+    served_model_name: String,
     pooling: Option<text_embeddings_backend::Pool>,
     max_concurrent_requests: usize,
     max_batch_tokens: usize,
@@ -72,12 +73,16 @@ pub async fn run(
         // Using a local model
         (model_id_path.to_path_buf(), None)
     } else {
-        let mut builder = ApiBuilder::from_env()
-            .with_progress(false)
-            .with_token(hf_token);
+        let mut builder = ApiBuilder::from_env().with_progress(false);
 
         if let Some(cache_dir) = huggingface_hub_cache {
             builder = builder.with_cache_dir(cache_dir.into());
+        }
+
+        // NOTE: Only set the `token` if it's not None, otherwise leave it as default so that the
+        // token from the cache location is pulled instead, if exists
+        if hf_token.is_some() {
+            builder = builder.with_token(hf_token);
         }
 
         if let Ok(origin) = std::env::var("HF_HUB_USER_AGENT_ORIGIN") {
@@ -141,9 +146,16 @@ pub async fn run(
         "tokenizer.json not found. text-embeddings-inference only supports fast tokenizers",
     );
     tokenizer.with_padding(None);
-    // Qwen2 updates the post processor manually instead of into the tokenizer.json...
+    // Old Qwen2  repos updates the post processor manually instead of into the tokenizer.json.
+    // Newer ones (https://huggingface.co/jinaai/jina-code-embeddings-0.5b/tree/main) have it in the tokenizer.json. This is to support both cases.
     // https://huggingface.co/Alibaba-NLP/gte-Qwen2-1.5B-instruct/blob/main/tokenization_qwen.py#L246
-    if config.model_type == "qwen2" {
+    if config.model_type == "qwen2"
+        && config
+            .auto_map
+            .as_ref()
+            .is_some_and(|m| m.get("AutoModel") == Some(&"modeling_qwen.Qwen2Model".to_string()))
+    {
+        tracing::warn!("Model is detected as a Qwen2 model with remote code. Adding a post processor manually as the tokenizer.json does not contain a post processor.");
         let template = TemplateProcessing::builder()
             .try_single("$A:0 <|endoftext|>:0")
             .unwrap()
@@ -169,7 +181,7 @@ pub async fn run(
         || &config.model_type == "camembert"
         || &config.model_type == "roberta"
     {
-        config.pad_token_id + 1
+        config.pad_token_id.unwrap_or(0) + 1
     } else {
         0
     };
@@ -193,29 +205,24 @@ pub async fn run(
         }
     };
 
-    // Raise an error when max_input_length is bigger than max_batch tokens to prevent an infinite loop in the queue
     let max_input_length = if base_input_length > max_batch_tokens {
         if !auto_truncate {
             anyhow::bail!(
-                "`--max-batch-tokens` cannot be lower than the model `max_input_length` ({} < {}) when `--auto-truncate` is disabled, add the `--auto-truncate` flag to truncate the input sequences to match the `--max-batch-tokens`.",
-                base_input_length,
-                max_batch_tokens
+                "The maximum input length is `{base_input_length}` which exceeds `--max-batch-tokens={max_batch_tokens}`. Either increase `--max-batch-tokens` to at least `{base_input_length}`, or set `--auto-truncate true` so that regardless the maximum input length, those are truncated to `{max_batch_tokens}` tokens."
             );
         }
         tracing::warn!(
-            "The input sequences will be truncated to {} tokens even if the model `max_input_length` is greater than the provided `--max-batch-tokens` ({} > {}), as `--auto-truncate` is enabled.",
-            max_batch_tokens,
-            base_input_length,
-            max_batch_tokens
+            "The maximum input length is `{base_input_length}` which exceeds `--max-batch-tokens={max_batch_tokens}`. Input sequences will be truncated to `{max_batch_tokens}` tokens, as `--auto-truncate` is either not provided (defaults to true) or provided as true. To avoid truncation, increase `--max-batch-tokens` to at least `{base_input_length}` and set `--auto-truncate false`."
         );
         max_batch_tokens
     } else {
         base_input_length
     };
-
     tracing::info!("Maximum number of tokens per request: {max_input_length}");
 
-    let tokenization_workers = tokenization_workers.unwrap_or_else(num_cpus::get);
+    // fall-back to num_cpus - 1 to leave some CPU for the backend, and at most 64 workers.
+    let tokenization_workers =
+        tokenization_workers.unwrap_or_else(|| (num_cpus::get() - 1).clamp(1, 64));
 
     // Try to load new ST Config
     let mut new_st_config: Option<NewSTConfig> = None;
@@ -281,7 +288,12 @@ pub async fn run(
 
     tracing::info!("Warming up model");
     backend
-        .warmup(max_input_length, max_batch_tokens, max_batch_requests)
+        .warmup(
+            max_input_length,
+            max_batch_tokens,
+            max_batch_requests,
+            backend.padded_model,
+        )
         .await
         .context("Model backend is not healthy")?;
 
@@ -309,6 +321,7 @@ pub async fn run(
         model_id,
         model_sha: revision,
         model_dtype: dtype.to_string(),
+        served_model_name,
         model_type,
         max_concurrent_requests,
         max_input_length,
@@ -446,9 +459,10 @@ pub struct ModelConfig {
     #[serde(alias = "n_positions")]
     pub max_position_embeddings: usize,
     #[serde(default)]
-    pub pad_token_id: usize,
+    pub pad_token_id: Option<usize>,
     pub id2label: Option<HashMap<String, String>>,
     pub label2id: Option<HashMap<String, usize>>,
+    pub auto_map: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -524,6 +538,8 @@ pub struct Info {
     pub model_sha: Option<String>,
     #[cfg_attr(feature = "http", schema(example = "float16"))]
     pub model_dtype: String,
+    #[cfg_attr(feature = "http", schema(example = "thenlper/gte-base"))]
+    pub served_model_name: String,
     pub model_type: ModelType,
     /// Router Parameters
     #[cfg_attr(feature = "http", schema(example = "128"))]
