@@ -3,7 +3,6 @@ use candle::cuda_backend::cudarc::driver;
 use candle::cuda_backend::cudarc::driver::sys::CUdevice_attribute::{
     CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
 };
-use candle::cuda_backend::cudarc::driver::CudaDevice;
 
 pub fn get_compile_compute_cap() -> Result<usize, anyhow::Error> {
     env!("CUDA_COMPUTE_CAP")
@@ -13,13 +12,24 @@ pub fn get_compile_compute_cap() -> Result<usize, anyhow::Error> {
 
 pub fn get_runtime_compute_cap() -> Result<usize, anyhow::Error> {
     driver::result::init().context("CUDA is not available")?;
-    let device = CudaDevice::new(0).context("CUDA is not available")?;
-    let major = device
-        .attribute(CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR)
-        .context("Could not retrieve device compute capability major")?;
-    let minor = device
-        .attribute(CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR)
-        .context("Could not retrieve device compute capability minor")?;
+    // cudarc 0.19 removed `CudaDevice::new`; use the raw driver API to fetch
+    // device attributes without constructing a full CudaContext.
+    let cu_device =
+        driver::result::device::get(0).context("Could not get CUDA device 0")?;
+    let major = unsafe {
+        driver::result::device::get_attribute(
+            cu_device,
+            CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+        )
+    }
+    .context("Could not retrieve device compute capability major")?;
+    let minor = unsafe {
+        driver::result::device::get_attribute(
+            cu_device,
+            CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+        )
+    }
+    .context("Could not retrieve device compute capability minor")?;
     Ok((major * 10 + minor) as usize)
 }
 
