@@ -84,10 +84,10 @@ candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev 
 # cudarc = { git = "https://github.com/Narsil/cudarc", rev = "8b4f18b4bcd5e4b1a9daf40abc3a2e27f83f06e9" }
 cudarc = { git = "https://github.com/EricLBuehler/cudarc", rev = "34834440ada40a7c53d46d45b65d5e42c5f5d903" }
 #
-candle = { git = "https://github.com/spiceai/candle", rev = "c87b9bc5ddfd4fdd4446ac7efae1566583ab1d55", package = "candle-core" }
-candle-nn = { git = "https://github.com/spiceai/candle", rev = "c87b9bc5ddfd4fdd4446ac7efae1566583ab1d55", package = "candle-nn" }
-candle-transformers = { git = "https://github.com/spiceai/candle", rev = "c87b9bc5ddfd4fdd4446ac7efae1566583ab1d55", package = "candle-transformers" }
-candle-flash-attn = { git = "https://github.com/spiceai/candle", rev = "c87b9bc5ddfd4fdd4446ac7efae1566583ab1d55", package = "candle-flash-attn" }
+candle = { git = "https://github.com/spiceai/candle", rev = "7de0d9fdff7dfb6289442abfba821e8d77f57c58", package = "candle-core" }
+candle-nn = { git = "https://github.com/spiceai/candle", rev = "7de0d9fdff7dfb6289442abfba821e8d77f57c58", package = "candle-nn" }
+candle-transformers = { git = "https://github.com/spiceai/candle", rev = "7de0d9fdff7dfb6289442abfba821e8d77f57c58", package = "candle-transformers" }
+candle-flash-attn = { git = "https://github.com/spiceai/candle", rev = "7de0d9fdff7dfb6289442abfba821e8d77f57c58", package = "candle-flash-attn" }
 [profile.release]
 debug = 0
 lto = "fat"
