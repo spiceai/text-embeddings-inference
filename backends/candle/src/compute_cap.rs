@@ -14,8 +14,7 @@ pub fn get_runtime_compute_cap() -> Result<usize, anyhow::Error> {
     driver::result::init().context("CUDA is not available")?;
     // cudarc 0.19 removed `CudaDevice::new`; use the raw driver API to fetch
     // device attributes without constructing a full CudaContext.
-    let cu_device =
-        driver::result::device::get(0).context("Could not get CUDA device 0")?;
+    let cu_device = driver::result::device::get(0).context("Could not get CUDA device 0")?;
     let major = unsafe {
         driver::result::device::get_attribute(
             cu_device,
