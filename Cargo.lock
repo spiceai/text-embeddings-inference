@@ -401,7 +401,7 @@ dependencies = [
  "bitflags 2.9.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "lazy_static",
  "lazycell",
  "log",
@@ -517,15 +517,15 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "candle-core"
-version = "0.10.1"
-source = "git+https://github.com/spiceai/candle?rev=fab4da8172a997bc6dfb4100a51a72d1a7a37988#fab4da8172a997bc6dfb4100a51a72d1a7a37988"
+version = "0.11.0"
+source = "git+https://github.com/spiceai/candle?rev=fe45e9ed25348df05e37c3c78b6b9c384f87d797#fe45e9ed25348df05e37c3c78b6b9c384f87d797"
 dependencies = [
  "accelerate-src",
  "byteorder",
  "candle-kernels",
  "candle-metal-kernels",
  "candle-ug",
- "cudarc 0.19.4",
+ "cudarc 0.19.8",
  "float8",
  "gemm 0.19.0",
  "half",
@@ -540,27 +540,28 @@ dependencies = [
  "rand 0.9.0",
  "rand_distr",
  "rayon",
- "safetensors 0.7.0",
+ "safetensors 0.8.0",
  "thiserror 2.0.12",
  "tokenizers 0.22.2",
  "yoke 0.8.2",
- "zip 7.2.0",
+ "zerocopy 0.8.24",
+ "zip 8.6.0",
 ]
 
 [[package]]
 name = "candle-cublaslt"
 version = "0.2.2"
-source = "git+https://github.com/spiceai/candle-cublaslt?rev=72be72013e9b9ba69a066aa1920b13255d43959b#72be72013e9b9ba69a066aa1920b13255d43959b"
+source = "git+https://github.com/spiceai/candle-cublaslt?rev=b61fe9e981c696f256c17ca963662da23b2c1550#b61fe9e981c696f256c17ca963662da23b2c1550"
 dependencies = [
  "candle-core",
- "cudarc 0.17.6",
+ "cudarc 0.19.8",
  "half",
 ]
 
 [[package]]
 name = "candle-flash-attn"
-version = "0.10.1"
-source = "git+https://github.com/spiceai/candle?rev=fab4da8172a997bc6dfb4100a51a72d1a7a37988#fab4da8172a997bc6dfb4100a51a72d1a7a37988"
+version = "0.11.0"
+source = "git+https://github.com/spiceai/candle?rev=fe45e9ed25348df05e37c3c78b6b9c384f87d797#fe45e9ed25348df05e37c3c78b6b9c384f87d797"
 dependencies = [
  "anyhow",
  "candle-core",
@@ -595,8 +596,8 @@ dependencies = [
 
 [[package]]
 name = "candle-kernels"
-version = "0.10.1"
-source = "git+https://github.com/spiceai/candle?rev=fab4da8172a997bc6dfb4100a51a72d1a7a37988#fab4da8172a997bc6dfb4100a51a72d1a7a37988"
+version = "0.11.0"
+source = "git+https://github.com/spiceai/candle?rev=fe45e9ed25348df05e37c3c78b6b9c384f87d797#fe45e9ed25348df05e37c3c78b6b9c384f87d797"
 dependencies = [
  "cudaforge",
 ]
@@ -604,7 +605,7 @@ dependencies = [
 [[package]]
 name = "candle-layer-norm"
 version = "0.0.1"
-source = "git+https://github.com/spiceai/candle-layer-norm?rev=88b9ffdd7077fce11d3f6cb77bbe7093269631fe#88b9ffdd7077fce11d3f6cb77bbe7093269631fe"
+source = "git+https://github.com/spiceai/candle-layer-norm?rev=055b81839fa1ce01d45d6230f5a21fea18c9517c#055b81839fa1ce01d45d6230f5a21fea18c9517c"
 dependencies = [
  "anyhow",
  "candle-core",
@@ -615,9 +616,10 @@ dependencies = [
 
 [[package]]
 name = "candle-metal-kernels"
-version = "0.10.1"
-source = "git+https://github.com/spiceai/candle?rev=fab4da8172a997bc6dfb4100a51a72d1a7a37988#fab4da8172a997bc6dfb4100a51a72d1a7a37988"
+version = "0.11.0"
+source = "git+https://github.com/spiceai/candle?rev=fe45e9ed25348df05e37c3c78b6b9c384f87d797#fe45e9ed25348df05e37c3c78b6b9c384f87d797"
 dependencies = [
+ "block2",
  "half",
  "objc2",
  "objc2-foundation",
@@ -629,8 +631,8 @@ dependencies = [
 
 [[package]]
 name = "candle-nn"
-version = "0.10.1"
-source = "git+https://github.com/spiceai/candle?rev=fab4da8172a997bc6dfb4100a51a72d1a7a37988#fab4da8172a997bc6dfb4100a51a72d1a7a37988"
+version = "0.11.0"
+source = "git+https://github.com/spiceai/candle?rev=fe45e9ed25348df05e37c3c78b6b9c384f87d797#fe45e9ed25348df05e37c3c78b6b9c384f87d797"
 dependencies = [
  "accelerate-src",
  "candle-core",
@@ -640,7 +642,7 @@ dependencies = [
  "num-traits",
  "objc2-metal",
  "rayon",
- "safetensors 0.7.0",
+ "safetensors 0.8.0",
  "serde",
  "thiserror 2.0.12",
 ]
@@ -648,7 +650,7 @@ dependencies = [
 [[package]]
 name = "candle-rotary"
 version = "0.0.1"
-source = "git+https://github.com/spiceai/candle-rotary?rev=8a437f99881bd4803f61c7c16ed4367f7cab76fc#8a437f99881bd4803f61c7c16ed4367f7cab76fc"
+source = "git+https://github.com/spiceai/candle-rotary?rev=264537e36797807bfec73b3b71cbc9596de35b1b#264537e36797807bfec73b3b71cbc9596de35b1b"
 dependencies = [
  "anyhow",
  "bindgen_cuda",
@@ -658,8 +660,8 @@ dependencies = [
 
 [[package]]
 name = "candle-transformers"
-version = "0.10.1"
-source = "git+https://github.com/spiceai/candle?rev=fab4da8172a997bc6dfb4100a51a72d1a7a37988#fab4da8172a997bc6dfb4100a51a72d1a7a37988"
+version = "0.11.0"
+source = "git+https://github.com/spiceai/candle?rev=fe45e9ed25348df05e37c3c78b6b9c384f87d797#fe45e9ed25348df05e37c3c78b6b9c384f87d797"
 dependencies = [
  "byteorder",
  "candle-core",
@@ -676,8 +678,8 @@ dependencies = [
 
 [[package]]
 name = "candle-ug"
-version = "0.10.1"
-source = "git+https://github.com/spiceai/candle?rev=fab4da8172a997bc6dfb4100a51a72d1a7a37988#fab4da8172a997bc6dfb4100a51a72d1a7a37988"
+version = "0.11.0"
+source = "git+https://github.com/spiceai/candle?rev=fe45e9ed25348df05e37c3c78b6b9c384f87d797#fe45e9ed25348df05e37c3c78b6b9c384f87d797"
 dependencies = [
  "ug",
  "ug-cuda",
@@ -977,9 +979,9 @@ dependencies = [
 
 [[package]]
 name = "cudarc"
-version = "0.19.4"
+version = "0.19.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f071cd6a7b5d51607df76aa2d426aaabc7a74bc6bdb885b8afa63a880572ad9b"
+checksum = "42310153e06cf4cd532901f7096beb27504d681736a29ee90728ae4e2d93b2a8"
 dependencies = [
  "float8",
  "half",
@@ -1267,12 +1269,12 @@ dependencies = [
 
 [[package]]
 name = "fancy-regex"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72cf461f865c862bb7dc573f643dd6a2b6842f7c30b07882b56bd148cc2761b8"
+checksum = "e1e1dacd0d2082dfcf1351c4bdd566bbe89a2b263235a2b50058f1e130a47277"
 dependencies = [
  "bit-set",
- "regex-automata 0.4.9",
+ "regex-automata 0.4.16",
  "regex-syntax 0.8.5",
 ]
 
@@ -1849,6 +1851,7 @@ dependencies = [
  "num-traits",
  "rand 0.9.0",
  "rand_distr",
+ "zerocopy 0.8.24",
 ]
 
 [[package]]
@@ -3632,8 +3635,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
- "heck 0.4.1",
- "itertools 0.10.5",
+ "heck 0.5.0",
+ "itertools 0.11.0",
  "log",
  "multimap 0.10.0",
  "once_cell",
@@ -3666,7 +3669,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.100",
@@ -3972,7 +3975,7 @@ checksum = "4219d74c6b67a3654a9fbebc4b419e22126d13d2f3c4a07ee0cb61ff79a79619"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-automata 0.4.9",
+ "regex-automata 0.4.16",
  "regex-syntax 0.8.5",
 ]
 
@@ -3987,9 +3990,9 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.4.9"
+version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "809e8dc61f6de73b46c85f4c96486310fe304c434cfa43669d7b40f711150908"
+checksum = "8fcfdb36bda0c880c5931cdc7a2bcdc8ba4556847b9d912bca70bc94708711ad"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -4234,13 +4237,15 @@ dependencies = [
 
 [[package]]
 name = "safetensors"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "675656c1eabb620b921efea4f9199f97fc86e36dd6ffd1fbbe48d0f59a4987f5"
+checksum = "79b079b829cb27a1c3c374341345ed2e8b2c0c839034522cee576c140bd7f846"
 dependencies = [
  "hashbrown 0.16.1",
+ "libc",
  "serde",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]
@@ -6497,9 +6502,9 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "7.2.0"
+version = "8.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c42e33efc22a0650c311c2ef19115ce232583abbe80850bc8b66509ebef02de0"
+checksum = "2d04a6b5381502aa6087c94c669499eb1602eb9c5e8198e534de571f7154809b"
 dependencies = [
  "crc32fast",
  "indexmap 2.9.0",

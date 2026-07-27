@@ -68,13 +68,16 @@ candle = { version = "0.11", package = "candle-core" }
 
 half = { version = "2.3.1", features = ["num-traits"] }
 
-candle-nn = { version = "*" }
-candle-transformers = { version = "*" }
+# Pin to the same major as `candle` above: a wildcard lets a stale lock entry keep an
+# older candle-nn, which leaves the [patch.crates-io] override unused and drags a
+# second candle-core into the graph.
+candle-nn = { version = "0.11" }
+candle-transformers = { version = "0.11" }
 candle-flash-attn = { version = "*" }                                                                                                    #, optional = true }
 candle-flash-attn-v1 = { git = "https://github.com/huggingface/candle-flash-attn-v1", rev = "3f1870b0d708579904c76e41745c659c3f9fa038" } #, optional = true }
-candle-cublaslt = { git = "https://github.com/spiceai/candle-cublaslt", rev = "ac83cbf7bcc5543d8a95198ee612e03234ad8842" }               # , optional = true }
+candle-cublaslt = { git = "https://github.com/spiceai/candle-cublaslt", rev = "b61fe9e981c696f256c17ca963662da23b2c1550" }               # , optional = true }
 cudarc = { git = "https://github.com/EricLBuehler/cudarc", rev = "34834440ada40a7c53d46d45b65d5e42c5f5d903" }                            #, optional = true }
-candle-rotary = { git = "https://github.com/spiceai/candle-rotary", rev = "80527d270ad3291327f7ff01a42421ec6962dff1" }                   #, optional = true }
+candle-rotary = { git = "https://github.com/spiceai/candle-rotary", rev = "264537e36797807bfec73b3b71cbc9596de35b1b" }                   #, optional = true }
 candle-index-select-cu = { version = "0.0.1", features = ["cuda-11"], default-features = false }
 
 candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev = "055b81839fa1ce01d45d6230f5a21fea18c9517c" } #, optional = true }
@@ -84,10 +87,10 @@ candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev 
 # cudarc = { git = "https://github.com/Narsil/cudarc", rev = "8b4f18b4bcd5e4b1a9daf40abc3a2e27f83f06e9" }
 cudarc = { git = "https://github.com/EricLBuehler/cudarc", rev = "34834440ada40a7c53d46d45b65d5e42c5f5d903" }
 #
-candle = { git = "https://github.com/spiceai/candle", rev = "5869e3dcc834649263550f9703bb91ff9ccb6553", package = "candle-core" }
-candle-nn = { git = "https://github.com/spiceai/candle", rev = "5869e3dcc834649263550f9703bb91ff9ccb6553", package = "candle-nn" }
-candle-transformers = { git = "https://github.com/spiceai/candle", rev = "5869e3dcc834649263550f9703bb91ff9ccb6553", package = "candle-transformers" }
-candle-flash-attn = { git = "https://github.com/spiceai/candle", rev = "5869e3dcc834649263550f9703bb91ff9ccb6553", package = "candle-flash-attn" }
+candle = { git = "https://github.com/spiceai/candle", rev = "fe45e9ed25348df05e37c3c78b6b9c384f87d797", package = "candle-core" }
+candle-nn = { git = "https://github.com/spiceai/candle", rev = "fe45e9ed25348df05e37c3c78b6b9c384f87d797", package = "candle-nn" }
+candle-transformers = { git = "https://github.com/spiceai/candle", rev = "fe45e9ed25348df05e37c3c78b6b9c384f87d797", package = "candle-transformers" }
+candle-flash-attn = { git = "https://github.com/spiceai/candle", rev = "fe45e9ed25348df05e37c3c78b6b9c384f87d797", package = "candle-flash-attn" }
 [profile.release]
 debug = 0
 lto = "fat"
