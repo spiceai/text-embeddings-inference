@@ -75,12 +75,12 @@ candle-nn = { version = "0.11" }
 candle-transformers = { version = "0.11" }
 candle-flash-attn = { version = "*" }                                                                                                    #, optional = true }
 candle-flash-attn-v1 = { git = "https://github.com/huggingface/candle-flash-attn-v1", rev = "3f1870b0d708579904c76e41745c659c3f9fa038" } #, optional = true }
-candle-cublaslt = { git = "https://github.com/spiceai/candle-cublaslt", rev = "b61fe9e981c696f256c17ca963662da23b2c1550" }               # , optional = true }
+candle-cublaslt = { git = "https://github.com/spiceai/candle-cublaslt", rev = "c41bf9c6e87195749c2262d16ca320af2bbebbfe" }               # , optional = true }
 cudarc = { git = "https://github.com/EricLBuehler/cudarc", rev = "34834440ada40a7c53d46d45b65d5e42c5f5d903" }                            #, optional = true }
-candle-rotary = { git = "https://github.com/spiceai/candle-rotary", rev = "264537e36797807bfec73b3b71cbc9596de35b1b" }                   #, optional = true }
+candle-rotary = { git = "https://github.com/spiceai/candle-rotary", rev = "e12f91a6c8beec5373ccec91a5ccad80619cf065" }                   #, optional = true }
 candle-index-select-cu = { version = "0.0.1", features = ["cuda-11"], default-features = false }
 
-candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev = "055b81839fa1ce01d45d6230f5a21fea18c9517c" } #, optional = true }
+candle-layer-norm = { git = "https://github.com/spiceai/candle-layer-norm", rev = "dfdbfbb953ceeb0366e5e3b69f2933204309d3dd" } #, optional = true }
 
 [patch.crates-io]
 # This could be a problem.

@@ -401,7 +401,7 @@ dependencies = [
  "bitflags 2.9.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "lazy_static",
  "lazycell",
  "log",
@@ -551,7 +551,7 @@ dependencies = [
 [[package]]
 name = "candle-cublaslt"
 version = "0.2.2"
-source = "git+https://github.com/spiceai/candle-cublaslt?rev=b61fe9e981c696f256c17ca963662da23b2c1550#b61fe9e981c696f256c17ca963662da23b2c1550"
+source = "git+https://github.com/spiceai/candle-cublaslt?rev=c41bf9c6e87195749c2262d16ca320af2bbebbfe#c41bf9c6e87195749c2262d16ca320af2bbebbfe"
 dependencies = [
  "candle-core",
  "cudarc 0.19.8",
@@ -605,7 +605,7 @@ dependencies = [
 [[package]]
 name = "candle-layer-norm"
 version = "0.0.1"
-source = "git+https://github.com/spiceai/candle-layer-norm?rev=055b81839fa1ce01d45d6230f5a21fea18c9517c#055b81839fa1ce01d45d6230f5a21fea18c9517c"
+source = "git+https://github.com/spiceai/candle-layer-norm?rev=dfdbfbb953ceeb0366e5e3b69f2933204309d3dd#dfdbfbb953ceeb0366e5e3b69f2933204309d3dd"
 dependencies = [
  "anyhow",
  "candle-core",
@@ -650,7 +650,7 @@ dependencies = [
 [[package]]
 name = "candle-rotary"
 version = "0.0.1"
-source = "git+https://github.com/spiceai/candle-rotary?rev=264537e36797807bfec73b3b71cbc9596de35b1b#264537e36797807bfec73b3b71cbc9596de35b1b"
+source = "git+https://github.com/spiceai/candle-rotary?rev=e12f91a6c8beec5373ccec91a5ccad80619cf065#e12f91a6c8beec5373ccec91a5ccad80619cf065"
 dependencies = [
  "anyhow",
  "bindgen_cuda",
@@ -3636,7 +3636,7 @@ checksum = "22505a5c94da8e3b7c2996394d1c933236c4d743e81a410bcca4e6989fc066a4"
 dependencies = [
  "bytes",
  "heck 0.4.1",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "log",
  "multimap 0.10.0",
  "once_cell",
@@ -3669,7 +3669,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81bddcdb20abf9501610992b6759a4c888aef7d1a7247ef75e2404275ac24af1"
 dependencies = [
  "anyhow",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote",
  "syn 2.0.100",
